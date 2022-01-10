@@ -19,7 +19,8 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "hemispheres": hemisphere_data(browser)
     }
 
     # Stop webdriver and return data
@@ -96,6 +97,53 @@ def mars_facts():
 
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
+
+def hemisphere_data(browser):
+    hemisphere_image_urls = []
+    url = 'https://marshemispheres.com/'
+    browser.visit(url)
+    try:
+        # For-loop to iterate through different image results
+        for i in range(4):
+            # Parse the resulting html with soup
+            html = browser.html
+            hemi_soup = soup(html, 'html.parser')
+            
+            # Empty dictionary to be appended to list
+            hemispheres = {}
+            
+            # Find and grab image title by h3 tag
+            hemi_elem = hemi_soup.select_one('div.collapsible.results')
+            hemi_title = hemi_elem.find_all('h3')[i].text
+            
+            # Visit image's full page
+            hemi_click = browser.find_by_tag('a')[(i*2)+4]
+            hemi_click.click()
+            
+            # Parse the resulting html with soup
+            html = browser.html
+            hemi_soup = soup(html, 'html.parser')
+            
+            # Once on image's full page, find and grab image jpg link
+            hemi_jpg_elem = hemi_soup.select_one('div.wide-image-wrapper')
+            hemi_jpg_url = hemi_jpg_elem.find('a').get('href')
+            
+            # Construct absolute URL with relative jpg url
+            hemi_url = f'https://marshemispheres.com/{hemi_jpg_url}'
+            
+            # Create key-value pairs
+            hemispheres["image_url"] = hemi_url
+            hemispheres["title"] = hemi_title
+            
+            # Append to list
+            hemisphere_image_urls.append(hemispheres)
+            
+            # Return to main page
+            browser.back()
+        return hemisphere_image_urls
+    except BaseException:
+        return None
+    browser.quit()
 
 if __name__ == "__main__":
 
